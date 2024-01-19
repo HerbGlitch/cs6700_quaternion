@@ -11,6 +11,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include "commonValues.hpp"
 
@@ -49,10 +51,10 @@ GLfloat dt = 0.0f;
 GLfloat lastTime = 0.0f;
 
 //vertex shader
-static const char* vShader = "src/shaders/shader.vert";
+static const char* vShader = "res/shaders/shader.vert";
 
 //fragment shader
-static const char* fShader = "src/shaders/shader.frag";
+static const char* fShader = "res/shaders/shader.frag";
 
 void calcAverageNormals(unsigned int* indices, unsigned int indiceCount, GLfloat* vertices, unsigned int verticeCount, unsigned int vLength, unsigned int normalOffset){
     for(size_t i = 0; i < indiceCount; i += 3){
@@ -150,13 +152,13 @@ int main(){
 
     camera = Camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f, 5.0f, 0.5f);
 
-    brickTexture = Texture((char *)"src/textures/brick_s.png");
+    brickTexture = Texture((char *)"res/textures/brick_s.png");
     brickTexture.load();
 
-    dirtTexture = Texture((char *)"src/textures/dirt_s.png");
+    dirtTexture = Texture((char *)"res/textures/dirt_s.png");
     dirtTexture.load();
 
-    plainTexture = Texture((char *)"src/textures/plain.png");
+    plainTexture = Texture((char *)"res/textures/plain.png");
     plainTexture.load();
 
     shinyMaterial = Material(4.0f, 256.0f);
@@ -190,11 +192,18 @@ int main(){
     GLuint uniformSpecularIntensity = 0, uniformShininess = 0;
     glm::mat4 projection = glm::perspective(45.0f, mainWindow.getBufferWidth()/mainWindow.getBufferHeight(), 0.1f, 100.0f);
 
+    float rotationDegree = 0.0f;
+
     //Loop until window closed
     while(!mainWindow.getShouldClose()){
         GLfloat now = glfwGetTime();
         dt = now - lastTime;
         lastTime = now;
+
+        rotationDegree += (dt * 10.0f);
+        if(rotationDegree > 360.0f){
+            rotationDegree -= 360.0f;
+        }
 
         //get + handle user input events
         glfwPollEvents();
@@ -226,7 +235,11 @@ int main(){
         glUniformMatrix4fv(uniformView, 1, GL_FALSE, glm::value_ptr(camera.calculateViewMatrix()));
         glUniform3f(uniformEyePostion, camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
 
+        //HERE: we rotate using a quaternion
+        glm::quat quaternion = glm::angleAxis(glm::radians(rotationDegree), glm::vec3(0.f, 1.f, 0.f));
+        glm::mat4 rotationMatrix = glm::toMat4(quaternion);
         glm::mat4 model(1.0f);
+        model *= rotationMatrix;
         model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.5f));
         // model = glm::scale(model, glm::vec3(0.4f, 0.4f, 1.0f));
         glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
